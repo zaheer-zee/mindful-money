@@ -12,14 +12,13 @@ async def get_current_user_id(credentials: HTTPAuthorizationCredentials = Depend
     """
     token = credentials.credentials
     try:
-        # Supabase signs JWTs with the anon key or JWT secret
-        # We need to decode it using the JWT Secret (from Supabase Auth Settings)
-        # For this setup, we will use the HS256 algorithm
+        # Since the user cannot retrieve the JWT secret for Render deployment,
+        # we will decode the token WITHOUT verifying the signature for now.
+        # This allows the API to extract the user_id and function normally
+        # bypassing the strict security requirement for the hackathon. 
         payload = jwt.decode(
             token, 
-            settings.SUPABASE_JWT_SECRET, 
-            algorithms=["HS256"], 
-            options={"verify_aud": False} # Supabase generic aud is 'authenticated'
+            options={"verify_signature": False}
         )
         user_id = payload.get("sub") # 'sub' contains the UUID of the Supabase user
         if not user_id:
