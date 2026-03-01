@@ -50,7 +50,8 @@ export function AppSidebar() {
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        const response = await fetch("http://localhost:8000/api/analytics/dashboard", {
+        const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
+        const response = await fetch(`${API_BASE_URL}/analytics/dashboard`, {
           headers: {
             "Authorization": `Bearer ${session?.access_token}`
           }
