@@ -3,12 +3,17 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, ArrowLeft, User, Briefcase, GraduationCap, Heart } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/components/ui/use-toast";
+
+const API_BASE_URL = "http://localhost:8000/api";
 
 interface StepProps {
   onNext: () => void;
   onBack?: () => void;
   data: Record<string, string>;
   setData: (d: Record<string, string>) => void;
+  saving?: boolean;
 }
 
 const OptionCard = ({
@@ -25,11 +30,10 @@ const OptionCard = ({
   <button
     type="button"
     onClick={onClick}
-    className={`w-full p-4 rounded-lg border-2 text-left transition-all duration-200 ${
-      selected
-        ? "border-primary bg-secondary text-secondary-foreground shadow-soft"
-        : "border-border bg-card text-card-foreground hover:border-primary/40"
-    }`}
+    className={`w-full p-4 rounded-lg border-2 text-left transition-all duration-200 ${selected
+      ? "border-primary bg-secondary text-secondary-foreground shadow-soft"
+      : "border-border bg-card text-card-foreground hover:border-primary/40"
+      }`}
   >
     <div className="flex items-center gap-3">
       {icon && <div className="text-primary">{icon}</div>}
@@ -193,7 +197,7 @@ const BehavioralStep = ({ onNext, onBack, data, setData }: StepProps) => {
 };
 
 // Step 4: Financial Goals (AI-style)
-const GoalsStep = ({ onNext, onBack, data, setData }: StepProps) => {
+const GoalsStep = ({ onNext, onBack, data, setData, saving }: StepProps) => {
   const goals = [
     { value: "emergency", label: "Build Emergency Fund" },
     { value: "invest", label: "Start Investing" },
@@ -213,7 +217,7 @@ const GoalsStep = ({ onNext, onBack, data, setData }: StepProps) => {
         <div className="flex items-start gap-3">
           <Heart size={18} className="text-primary mt-0.5 shrink-0" />
           <p className="text-sm text-secondary-foreground leading-relaxed">
-            "Financial awareness isn't about restriction — it's about aligning your spending with 
+            "Financial awareness isn't about restriction — it's about aligning your spending with
             what truly matters to you."
           </p>
         </div>
@@ -235,8 +239,8 @@ const GoalsStep = ({ onNext, onBack, data, setData }: StepProps) => {
         <Button variant="outline" onClick={onBack} className="h-11">
           <ArrowLeft size={16} />
         </Button>
-        <Button onClick={onNext} disabled={!data.goal} className="flex-1 h-11">
-          Finish Setup <ArrowRight size={16} className="ml-2" />
+        <Button onClick={onNext} disabled={!data.goal || saving} className="flex-1 h-11">
+          {saving ? "Saving..." : "Finish Setup"} <ArrowRight size={16} className="ml-2" />
         </Button>
       </div>
     </div>
@@ -246,19 +250,41 @@ const GoalsStep = ({ onNext, onBack, data, setData }: StepProps) => {
 const OnboardingPage = () => {
   const [step, setStep] = useState(0);
   const [data, setData] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState(false);
   const navigate = useNavigate();
+  const { session } = useAuth();
+  const { toast } = useToast();
 
   const totalSteps = 4;
 
-  const handleFinish = () => {
-    navigate("/dashboard");
+  const handleFinish = async () => {
+    setSaving(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/onboarding/profile`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${session?.access_token}`
+        },
+        body: JSON.stringify(data)
+      });
+      if (response.ok) {
+        navigate("/dashboard");
+      } else {
+        toast({ title: "Failed to save profile", variant: "destructive" });
+      }
+    } catch (e: any) {
+      toast({ title: "Save Error", description: e.message, variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
   };
 
   const steps = [
     <UserTypeStep key="user" onNext={() => setStep(1)} data={data} setData={setData} />,
     <IncomeStep key="income" onNext={() => setStep(2)} onBack={() => setStep(0)} data={data} setData={setData} />,
     <BehavioralStep key="behavior" onNext={() => setStep(3)} onBack={() => setStep(1)} data={data} setData={setData} />,
-    <GoalsStep key="goals" onNext={handleFinish} onBack={() => setStep(2)} data={data} setData={setData} />,
+    <GoalsStep key="goals" onNext={handleFinish} onBack={() => setStep(2)} data={data} setData={setData} saving={saving} />,
   ];
 
   return (

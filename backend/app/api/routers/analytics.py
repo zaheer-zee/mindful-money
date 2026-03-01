@@ -1,22 +1,16 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from typing import Dict, Any, List
 from datetime import datetime, timedelta
 from app.models.domain import User, Transaction
+from app.core.auth import get_current_user
 
 router = APIRouter()
 
 @router.get("/dashboard")
-async def get_dashboard_data():
+async def get_dashboard_data(user: User = Depends(get_current_user)):
     """
     Returns aggregated data for the React dashboard.
-    In a real app, we would filter by the user ID from the JWT token.
     """
-    mock_supabase_id = "test-user-123"
-    
-    # 1. Fetch user to ensure they exist
-    user = await User.find_one(User.supabase_id == mock_supabase_id)
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found. Please complete onboarding.")
 
     # 2. Setup date range (Current Month)
     now = datetime.utcnow()
@@ -25,14 +19,16 @@ async def get_dashboard_data():
     # 3. Aggregate Transactions
     # Retrieve all transactions for this month for the user
     transactions = await Transaction.find(
-        Transaction.user_id == mock_supabase_id,
+        Transaction.user_id == user.supabase_id,
         Transaction.date >= start_of_month
     ).to_list()
 
     total_spent = sum(t.amount for t in transactions if t.amount > 0)
     
     # Simple hardcoded budget for demo unless set in preferences
-    monthly_budget = user.profile.preferences.get("monthly_budget", 40000)
+    monthly_budget = 40000
+    if user.profile and user.profile.preferences:
+        monthly_budget = user.profile.preferences.get("monthly_budget", 40000)
     savings = max(0, monthly_budget - total_spent)
     
     # Calculate simple discipline score (100 = perfect, under budget with no anomalies)

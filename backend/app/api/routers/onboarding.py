@@ -6,41 +6,31 @@ import io
 from datetime import datetime
 from app.models.domain import User, Transaction, BehavioralProfile, Insight
 from app.services.ai_service import categorize_transactions
+from app.core.auth import get_current_user
 
 router = APIRouter()
 
+@router.post("/profile")
+async def save_profile(
+    preferences: dict,
+    user: User = Depends(get_current_user)
+):
+    if not user.profile:
+        user.profile = BehavioralProfile(preferences=preferences)
+    else:
+        user.profile.preferences = preferences
+    await user.save()
+    return {"status": "success", "message": "Profile updated"}
+
 @router.post("/")
 async def complete_onboarding(
-    survey_data: str = Form(...),
     statement: UploadFile = File(...),
-    statement_password: Optional[str] = Form(None)
+    statement_password: Optional[str] = Form(None),
+    user: User = Depends(get_current_user)
 ):
     """
-    Unified endpoint for onboarding. 
-    Accepts the initial survey answers as a JSON string, the bank statement file, 
-    and an optional password if the file is encrypted.
+    Unified endpoint for file upload. 
     """
-    try:
-        parsed_survey = json.loads(survey_data)
-    except json.JSONDecodeError:
-        raise HTTPException(status_code=400, detail="Invalid survey JSON string")
-        
-    # In a real app, 'user_id' comes from the Supabase JWT token.
-    # We will mock a user for now.
-    mock_supabase_id = "test-user-123"
-    
-    # 1. Ensure user exists (Upsert)
-    user = await User.find_one(User.supabase_id == mock_supabase_id)
-    if not user:
-        user = User(
-            supabase_id=mock_supabase_id,
-            email="test@example.com",
-            profile=BehavioralProfile(preferences=parsed_survey)
-        )
-        await user.insert()
-    else:
-        user.profile.preferences = parsed_survey
-        await user.save()
 
     # 2. Extract Data
     # A complete implementation would branch here based on the extension (.csv vs .pdf)
@@ -63,7 +53,7 @@ async def complete_onboarding(
 
     # 3. AI Processing (Groq)
     # Convert survey to a flat string for the LLM
-    context_str = json.dumps(parsed_survey)
+    context_str = json.dumps(user.profile.preferences) if user.profile else "{}"
     
     # Process in a small batch to respect API limits in demo
     batch = raw_transactions[:10] 
@@ -74,7 +64,7 @@ async def complete_onboarding(
     for t in enriched_batch:
         try:
             date_obj = datetime.strptime(t["date"], "%Y-%m-%d")
-        except:
+        except Exception:
             date_obj = datetime.utcnow()
             
         trans_doc = Transaction(

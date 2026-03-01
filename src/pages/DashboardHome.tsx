@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from "recharts";
 import { ChatAssistant } from "../components/ui/ChatAssistant";
+import { useAuth } from "@/contexts/AuthContext";
 
 const AnimatedNumber = ({ value, prefix = "" }: { value: number; prefix?: string }) => {
   const [display, setDisplay] = useState(0);
@@ -38,6 +39,8 @@ const API_BASE_URL = "http://localhost:8000/api";
 // Metric cards moved to sidebar
 
 const DashboardHome = () => {
+  const { session } = useAuth();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -55,7 +58,11 @@ const DashboardHome = () => {
     // Fetch real data from backend
     const fetchDashboardData = async () => {
       try {
-        const response = await fetch(`${API_BASE_URL}/analytics/dashboard`);
+        const response = await fetch(`${API_BASE_URL}/analytics/dashboard`, {
+          headers: {
+            "Authorization": `Bearer ${session?.access_token}`
+          }
+        });
         if (response.ok) {
           const result = await response.json();
           setData(result);
@@ -79,6 +86,7 @@ const DashboardHome = () => {
   }
 
   // Enrich pie data with colors
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const pieData = data.distribution.map((item: any, i: number) => ({
     ...item,
     color: colors[i % colors.length]
@@ -242,7 +250,7 @@ const DashboardHome = () => {
             <h3 className="font-display font-semibold text-foreground">Recent Transactions</h3>
           </div>
           <div className="divide-y divide-border">
-            {data.recent_transactions.map((tx: any) => (
+            {data.recent_transactions.map((tx: any) => ( // eslint-disable-line @typescript-eslint/no-explicit-any
               <div key={tx.id} className="p-4 flex items-center justify-between hover:bg-secondary/10 transition-colors">
                 <div className="flex items-center gap-4">
                   <div className={`p-2 rounded-lg ${tx.is_anomaly ? 'bg-destructive/10 text-destructive' : 'bg-primary/10 text-primary'}`}>

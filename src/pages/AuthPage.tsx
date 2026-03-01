@@ -4,15 +4,60 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { supabase } from "@/lib/supabase";
+import { useToast } from "@/components/ui/use-toast";
 
 const AuthPage = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [form, setForm] = useState({ name: "", email: "", password: "", age: "" });
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { toast } = useToast();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    navigate("/onboarding");
+    setLoading(true);
+
+    try {
+      if (isLogin) {
+        // Handle Login
+        const { error } = await supabase.auth.signInWithPassword({
+          email: form.email,
+          password: form.password,
+        });
+
+        if (error) {
+          toast({ title: "Login Failed", description: error.message, variant: "destructive" });
+        } else {
+          toast({ title: "Welcome back!", description: "Successfully logged in." });
+          navigate("/dashboard");
+        }
+      } else {
+        // Handle Signup
+        const { error } = await supabase.auth.signUp({
+          email: form.email,
+          password: form.password,
+          options: {
+            data: {
+              full_name: form.name,
+              age: form.age,
+            }
+          }
+        });
+
+        if (error) {
+          toast({ title: "Signup Failed", description: error.message, variant: "destructive" });
+        } else {
+          toast({ title: "Account created!", description: "Please answer a few questions." });
+          navigate("/onboarding");
+        }
+      }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (error: any) {
+      toast({ title: "An error occurred", description: error.message, variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -24,7 +69,7 @@ const AuthPage = () => {
             Take control of your financial behavior.
           </h1>
           <p className="text-primary-foreground/80 text-lg leading-relaxed">
-            SpendWise uses behavioral psychology and AI to help you understand your spending 
+            SpendWise uses behavioral psychology and AI to help you understand your spending
             patterns and build better financial habits.
           </p>
           <div className="mt-12 space-y-4">
@@ -111,8 +156,8 @@ const AuthPage = () => {
               />
             </div>
 
-            <Button type="submit" className="w-full h-11 mt-2">
-              {isLogin ? "Sign In" : "Create Account"}
+            <Button type="submit" className="w-full h-11 mt-2" disabled={loading}>
+              {loading ? "Loading..." : (isLogin ? "Sign In" : "Create Account")}
             </Button>
           </form>
 

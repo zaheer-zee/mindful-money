@@ -10,7 +10,12 @@ import {
   LogOut,
   TrendingDown,
   TrendingUp,
+  Home,
+  PieChart,
+  Briefcase,
 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/lib/supabase";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import {
@@ -37,13 +42,19 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const location = useLocation();
+  const { session } = useAuth();
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [data, setData] = useState<any>(null);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        const response = await fetch("http://localhost:8000/api/analytics/dashboard");
+        const response = await fetch("http://localhost:8000/api/analytics/dashboard", {
+          headers: {
+            "Authorization": `Bearer ${session?.access_token}`
+          }
+        });
         if (response.ok) {
           const result = await response.json();
           setData(result);
@@ -54,7 +65,7 @@ export function AppSidebar() {
     };
 
     fetchDashboardData();
-  }, []);
+  }, [session]);
 
   return (
     <Sidebar collapsible="icon">
@@ -140,7 +151,7 @@ export function AppSidebar() {
                   Top Categories Menu
                 </div>
                 <div className="space-y-1">
-                  {data.distribution.slice(0, 4).map((cat: any) => (
+                  {data.distribution.slice(0, 4).map((cat: any) => ( // eslint-disable-line @typescript-eslint/no-explicit-any
                     <div key={cat.name} className="flex justify-between items-center text-[11px] py-1">
                       <span className="text-sidebar-foreground/80 truncate pr-2">{cat.name}</span>
                       <span className="font-medium text-sidebar-foreground">₹{(cat.value / 1000).toFixed(1)}k</span>
@@ -155,11 +166,11 @@ export function AppSidebar() {
       <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton asChild>
-              <NavLink to="/" className="hover:bg-sidebar-accent/50 text-sidebar-foreground/60">
+            <SidebarMenuButton asChild tooltip="Logout" onClick={() => supabase.auth.signOut()}>
+              <button className="text-destructive hover:text-destructive hover:bg-destructive/10">
                 <LogOut className="mr-2 h-4 w-4" />
                 {!collapsed && <span>Sign Out</span>}
-              </NavLink>
+              </button>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>

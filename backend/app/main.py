@@ -54,6 +54,7 @@ def system_health():
         "message": "All systems go for Context-Aware Behavioral Finance analysis."
     }
 
+
 # Included routers
 app.include_router(onboarding.router, prefix="/api/onboarding", tags=["onboarding"])
 app.include_router(analytics.router, prefix="/api/analytics", tags=["analytics"])

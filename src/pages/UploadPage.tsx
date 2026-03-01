@@ -1,7 +1,11 @@
 import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Upload, FileText, CheckCircle2, Loader2 } from "lucide-react";
+import { Upload, FileText, CheckCircle2, Loader2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/components/ui/use-toast";
+
+const API_BASE_URL = "http://localhost:8000/api";
 
 const analysisSteps = [
   "Reading transactions…",
@@ -18,6 +22,8 @@ const UploadPage = () => {
   const [done, setDone] = useState(false);
   const [password, setPassword] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+  const { session } = useAuth();
+  const { toast } = useToast();
 
   const handleFile = (f: File) => {
     setFile(f);
@@ -28,22 +34,52 @@ const UploadPage = () => {
     if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
   };
 
-  const handleAnalyze = () => {
+  const handleAnalyze = async () => {
+    if (!file) return;
     setAnalyzing(true);
-    setCurrentStep(0);
-    let step = 0;
+    setCurrentStep(0); // Start animation
+
+    // Simulate steps locally, wait briefly for UI visual
+    const formData = new FormData();
+    formData.append("statement", file);
+    if (password) formData.append("statement_password", password);
+
+    // Run animation steps up to step 3 while uploading
+    let stepCount = 0;
     const interval = setInterval(() => {
-      step++;
-      if (step >= analysisSteps.length) {
-        clearInterval(interval);
+      stepCount++;
+      if (stepCount < analysisSteps.length - 1) {
+        setCurrentStep(stepCount);
+      }
+    }, 1200);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/onboarding/`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${session?.access_token}`
+        },
+        body: formData
+      });
+
+      clearInterval(interval);
+
+      if (response.ok) {
+        setCurrentStep(analysisSteps.length - 1); // Finale step
         setTimeout(() => {
           setDone(true);
           setAnalyzing(false);
         }, 600);
       } else {
-        setCurrentStep(step);
+        const data = await response.json();
+        toast({ title: "Analysis Failed", description: data.detail || "Unknown error", variant: "destructive" });
+        setAnalyzing(false);
       }
-    }, 1200);
+    } catch (error: any) {
+      clearInterval(interval);
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+      setAnalyzing(false);
+    }
   };
 
   return (

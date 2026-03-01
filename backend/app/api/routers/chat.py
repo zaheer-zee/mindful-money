@@ -1,9 +1,10 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 import httpx
 import json
 from app.core.config import settings
 from app.models.domain import User, Transaction
+from app.core.auth import get_current_user
 
 router = APIRouter()
 
@@ -13,21 +14,14 @@ class ChatRequest(BaseModel):
     message: str
 
 @router.post("/")
-async def chat_with_ai(request: ChatRequest):
+async def chat_with_ai(request: ChatRequest, user: User = Depends(get_current_user)):
     """
     Sends the user's message to Groq Llama, infusing the prompt with 
     their recent financial data and behavioral profile.
     """
-    mock_supabase_id = "test-user-123"
-    
-    # Fetch User Context
-    user = await User.find_one(User.supabase_id == mock_supabase_id)
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found.")
-        
     # Fetch Recent Transactions (last 10)
     transactions = await Transaction.find(
-        Transaction.user_id == mock_supabase_id
+        Transaction.user_id == user.supabase_id
     ).sort("-date").limit(10).to_list()
     
     # Build a context string
@@ -38,7 +32,7 @@ async def chat_with_ai(request: ChatRequest):
     You help users understand their spending behavior and stick to their goals.
     Keep your answers concise, practical, and empathetic. Do not use markdown headers, just simple paragraphs or bullet points.
     
-    User Profile Context: {json.dumps(user.profile.preferences)}
+    User Profile Context: {json.dumps(user.profile.preferences if user.profile else {})}
     
     Recent Transactions Context:
     {tx_context if tx_context else "No recent transactions found."}
@@ -52,7 +46,7 @@ async def chat_with_ai(request: ChatRequest):
     }
     
     payload = {
-        "model": "llama3-8b-8192",
+        "model": "llama-3.1-8b-instant",
         "messages": [
             {"role": "system", "content": "You are a helpful AI financial advisor named Mindful."},
             {"role": "user", "content": prompt}
@@ -64,6 +58,7 @@ async def chat_with_ai(request: ChatRequest):
         response = await client.post(GROQ_API_URL, headers=headers, json=payload, timeout=30.0)
         
         if response.status_code != 200:
+            print(f"Groq API Error: {response.text}")
             raise HTTPException(status_code=502, detail="Failed to communicate with AI provider.")
             
         data = response.json()

@@ -24,7 +24,7 @@ async def categorize_transactions(transactions: List[Dict[str, Any]], user_conte
     Do not return any markdown formatting, just the raw JSON.
     
     Transactions:
-    {json.dumps([{ 'id': i, 'desc': t['merchant'], 'amt': t['amount'] } for i, t in enumerate(transactions)])}
+    {json.dumps([{'id': i, 'desc': t['merchant'], 'amt': t['amount']} for i, t in enumerate(transactions)])}
     """
     
     headers = {
@@ -33,7 +33,7 @@ async def categorize_transactions(transactions: List[Dict[str, Any]], user_conte
     }
     
     payload = {
-        "model": "llama3-8b-8192", # Fast and capable model
+        "model": "llama-3.1-8b-instant", # Fast and capable model
         "messages": [
             {"role": "system", "content": "You are a JSON-only API that outputs valid financial categorization JSON arrays."},
             {"role": "user", "content": prompt}
@@ -43,8 +43,11 @@ async def categorize_transactions(transactions: List[Dict[str, Any]], user_conte
     
     async with httpx.AsyncClient() as client:
         response = await client.post(GROQ_API_URL, headers=headers, json=payload, timeout=30.0)
-        response.raise_for_status()
         
+        if response.status_code != 200:
+            print(f"Groq API Error: {response.text}")
+            response.raise_for_status()
+            
         data = response.json()
         raw_json_str = data["choices"][0]["message"]["content"]
         

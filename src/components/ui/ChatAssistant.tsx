@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Send, Bot, User, Loader2 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 // Backend API URL
 const API_BASE_URL = "http://localhost:8000/api";
@@ -22,6 +23,7 @@ export const ChatAssistant = () => {
     const [input, setInput] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const scrollRef = useRef<HTMLDivElement>(null);
+    const { session } = useAuth();
 
     // Auto-scroll to bottom of chat
     useEffect(() => {
@@ -46,7 +48,10 @@ export const ChatAssistant = () => {
         try {
             const response = await fetch(`${API_BASE_URL}/chat`, {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${session?.access_token}`
+                },
                 body: JSON.stringify({ message: userMessage.content })
             });
 
@@ -95,8 +100,8 @@ export const ChatAssistant = () => {
                             {msg.role === "user" ? <User size={16} /> : <Bot size={16} />}
                         </div>
                         <div className={`px-4 py-2.5 rounded-2xl max-w-[80%] text-sm ${msg.role === "user"
-                                ? "bg-accent text-accent-foreground rounded-tr-sm"
-                                : "bg-secondary text-secondary-foreground rounded-tl-sm"
+                            ? "bg-accent text-accent-foreground rounded-tr-sm"
+                            : "bg-secondary text-secondary-foreground rounded-tl-sm"
                             }`}>
                             {msg.content}
                         </div>

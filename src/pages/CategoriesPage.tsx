@@ -3,6 +3,9 @@ import { motion } from "framer-motion";
 import { Tags, Save, Plus, Trash2, Edit2, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { useAuth } from "@/contexts/AuthContext";
 
 // Backend API URL
 const API_BASE_URL = "http://localhost:8000/api";
@@ -28,15 +31,21 @@ const CategoriesPage = () => {
     const [editingIndex, setEditingIndex] = useState<number | null>(null);
     const [editAmount, setEditAmount] = useState<string>("");
     const { toast } = useToast();
+    const { session } = useAuth();
 
     useEffect(() => {
         fetchBudgets();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const fetchBudgets = async () => {
         setLoading(true);
         try {
-            const response = await fetch(`${API_BASE_URL}/categories/budgets`);
+            const response = await fetch(`${API_BASE_URL}/categories/budgets`, {
+                headers: {
+                    "Authorization": `Bearer ${session?.access_token}`
+                }
+            });
             if (response.ok) {
                 const data = await response.json();
                 const savedBudgets = data.category_budgets || {};
@@ -79,6 +88,7 @@ const CategoriesPage = () => {
                 method: "PUT",
                 headers: {
                     "Content-Type": "application/json",
+                    "Authorization": `Bearer ${session?.access_token}`
                 },
                 body: JSON.stringify(payload)
             });
