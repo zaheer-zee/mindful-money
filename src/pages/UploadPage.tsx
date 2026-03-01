@@ -16,6 +16,7 @@ const UploadPage = () => {
   const [analyzing, setAnalyzing] = useState(false);
   const [currentStep, setCurrentStep] = useState(-1);
   const [done, setDone] = useState(false);
+  const [password, setPassword] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleFile = (f: File) => {
@@ -79,14 +80,34 @@ const UploadPage = () => {
       )}
 
       {file && !analyzing && !done && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-3">
-          <div className="flex-1 flex items-center gap-3 p-3 bg-secondary rounded-lg">
-            <FileText size={18} className="text-primary" />
-            <span className="text-sm font-medium text-foreground truncate">{file.name}</span>
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="flex-1 flex items-center gap-3 p-3 bg-secondary rounded-lg">
+              <FileText size={18} className="text-primary" />
+              <span className="text-sm font-medium text-foreground truncate">{file.name}</span>
+            </div>
+            <Button onClick={handleAnalyze} className="h-10 px-6">
+              Analyze
+            </Button>
           </div>
-          <Button onClick={handleAnalyze} className="h-10">
-            Analyze
-          </Button>
+
+          {file.name.toLowerCase().endsWith(".pdf") && (
+            <div className="p-4 border border-border rounded-lg bg-card shadow-sm">
+              <label className="block text-sm font-medium text-foreground mb-1.5">
+                Bank Statement Password <span className="text-muted-foreground font-normal">(if protected)</span>
+              </label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter PDF password"
+                className="w-full bg-secondary/50 border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+              />
+              <p className="text-xs text-muted-foreground mt-2">
+                We need this to extract your transactions. It is never saved or stored.
+              </p>
+            </div>
+          )}
         </motion.div>
       )}
 

@@ -7,8 +7,10 @@ import {
   PiggyBank,
   ArrowUpRight,
   ArrowDownRight,
+  AlertTriangle,
 } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from "recharts";
+import { ChatAssistant } from "../components/ui/ChatAssistant";
 
 const AnimatedNumber = ({ value, prefix = "" }: { value: number; prefix?: string }) => {
   const [display, setDisplay] = useState(0);
@@ -30,71 +32,60 @@ const AnimatedNumber = ({ value, prefix = "" }: { value: number; prefix?: string
   return <span>{prefix}{display.toLocaleString("en-IN")}</span>;
 };
 
-const pieData = [
-  { name: "Food", value: 8500, color: "hsl(174, 55%, 42%)" },
-  { name: "Transport", value: 3200, color: "hsl(174, 40%, 60%)" },
-  { name: "Shopping", value: 5800, color: "hsl(38, 70%, 55%)" },
-  { name: "Entertainment", value: 2400, color: "hsl(174, 30%, 75%)" },
-  { name: "Rent", value: 12000, color: "hsl(192, 25%, 35%)" },
-  { name: "Others", value: 3100, color: "hsl(200, 20%, 70%)" },
-];
+// Backend API URL
+const API_BASE_URL = "http://localhost:8000/api";
 
-const barData = [
-  { month: "Jul", spent: 28000, saved: 12000 },
-  { month: "Aug", spent: 32000, saved: 8000 },
-  { month: "Sep", spent: 25000, saved: 15000 },
-  { month: "Oct", spent: 29000, saved: 11000 },
-  { month: "Nov", spent: 27000, saved: 13000 },
-  { month: "Dec", spent: 35000, saved: 5000 },
-];
-
-const MetricCard = ({
-  title,
-  value,
-  prefix,
-  subtitle,
-  icon: Icon,
-  trend,
-  delay,
-}: {
-  title: string;
-  value: number;
-  prefix?: string;
-  subtitle: string;
-  icon: React.ElementType;
-  trend?: "up" | "down";
-  delay: number;
-}) => (
-  <motion.div
-    initial={{ opacity: 0, y: 16 }}
-    animate={{ opacity: 1, y: 0 }}
-    transition={{ delay, duration: 0.4 }}
-    className="bg-card rounded-lg border border-border p-5 shadow-card"
-  >
-    <div className="flex items-start justify-between mb-3">
-      <div className="p-2 bg-secondary rounded-lg">
-        <Icon size={18} className="text-primary" />
-      </div>
-      {trend && (
-        <div className={`flex items-center gap-1 text-xs font-medium ${
-          trend === "up" ? "text-success" : "text-destructive"
-        }`}>
-          {trend === "up" ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
-          {trend === "up" ? "+12%" : "-5%"}
-        </div>
-      )}
-    </div>
-    <p className="font-display text-2xl font-bold text-foreground">
-      <AnimatedNumber value={value} prefix={prefix} />
-    </p>
-    <p className="text-sm text-muted-foreground mt-1">{title}</p>
-    <p className="text-xs text-muted-foreground/70 mt-0.5">{subtitle}</p>
-  </motion.div>
-);
+// Metric cards moved to sidebar
 
 const DashboardHome = () => {
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  // A set of colors matching the theme for dynamic pie charts
+  const colors = [
+    "hsl(174, 55%, 42%)",
+    "hsl(192, 25%, 35%)",
+    "hsl(38, 70%, 55%)",
+    "hsl(174, 40%, 60%)",
+    "hsl(174, 30%, 75%)",
+    "hsl(200, 20%, 70%)"
+  ];
+
+  useEffect(() => {
+    // Fetch real data from backend
+    const fetchDashboardData = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/analytics/dashboard`);
+        if (response.ok) {
+          const result = await response.json();
+          setData(result);
+        }
+      } catch (error) {
+        console.error("Failed to fetch dashboard data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, []);
+
+  if (loading) {
+    return <div className="flex h-64 items-center justify-center text-muted-foreground">Loading specific financial insights...</div>;
+  }
+
+  if (!data) {
+    return <div className="flex h-64 items-center justify-center text-muted-foreground">Please complete onboarding to see insights.</div>;
+  }
+
+  // Enrich pie data with colors
+  const pieData = data.distribution.map((item: any, i: number) => ({
+    ...item,
+    color: colors[i % colors.length]
+  }));
+
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
+    <div className="max-w-6xl mx-auto space-y-6 pb-20">
       {/* Greeting */}
       <motion.div
         initial={{ opacity: 0 }}
@@ -102,46 +93,10 @@ const DashboardHome = () => {
         className="mb-2"
       >
         <h2 className="font-display text-2xl font-bold text-foreground">Good Morning 👋</h2>
-        <p className="text-muted-foreground text-sm">Here's your financial behavior overview.</p>
+        <p className="text-muted-foreground text-sm">Here's your financial behavior overview based on recent statements.</p>
       </motion.div>
 
-      {/* Metrics Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <MetricCard
-          title="Monthly Budget"
-          value={40000}
-          prefix="₹"
-          subtitle="Allocated this month"
-          icon={Target}
-          delay={0.1}
-        />
-        <MetricCard
-          title="Total Spent"
-          value={35000}
-          prefix="₹"
-          subtitle="87.5% of budget used"
-          icon={TrendingDown}
-          trend="down"
-          delay={0.2}
-        />
-        <MetricCard
-          title="Savings"
-          value={5000}
-          prefix="₹"
-          subtitle="This month"
-          icon={PiggyBank}
-          trend="up"
-          delay={0.3}
-        />
-        <MetricCard
-          title="Discipline Score"
-          value={72}
-          subtitle="Based on spending habits"
-          icon={TrendingUp}
-          trend="up"
-          delay={0.4}
-        />
-      </div>
+      {/* Metrics Grid removed - now living in the AppSidebar */}
 
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -205,7 +160,15 @@ const DashboardHome = () => {
           </h3>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={barData} barGap={2}>
+              {/* Temporarily using mock data for the 6-month historical chart */}
+              <BarChart data={[
+                { month: "Oct", spent: 29000, saved: 11000 },
+                { month: "Nov", spent: 27000, saved: 13000 },
+                { month: "Dec", spent: 35000, saved: 5000 },
+                { month: "Jan", spent: 31000, saved: 9000 },
+                { month: "Feb", spent: 20000, saved: 20000 },
+                { month: "Mar", spent: data.total_spent, saved: data.savings },
+              ]} barGap={2}>
                 <XAxis
                   dataKey="month"
                   axisLine={false}
@@ -245,78 +208,69 @@ const DashboardHome = () => {
       </div>
 
       {/* Behavioral Nudge */}
-      <motion.div
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.7 }}
-        className="bg-secondary rounded-lg border border-border p-5"
-      >
-        <div className="flex items-start gap-4">
-          <div className="p-2.5 bg-primary/10 rounded-lg shrink-0">
-            <Target size={20} className="text-primary" />
+      {data.anomalies_detected > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.7 }}
+          className="bg-secondary/50 rounded-lg border border-border p-5"
+        >
+          <div className="flex items-start gap-4">
+            <div className="p-2.5 bg-destructive/10 rounded-lg shrink-0">
+              <Target size={20} className="text-destructive" />
+            </div>
+            <div>
+              <h4 className="font-display text-sm font-semibold text-foreground">Behavioral Anomaly Warning</h4>
+              <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
+                We noticed <span className="font-semibold text-primary">{data.anomalies_detected} unusual transactions</span> this month that deviate from your
+                established baseline. Check the AI Chat below to get an explanation based on your profile goals.
+              </p>
+            </div>
           </div>
-          <div>
-            <h4 className="font-display text-sm font-semibold text-foreground">Saving Potential</h4>
-            <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
-              Based on your spending patterns, you had the potential to save{" "}
-              <span className="font-semibold text-primary">₹8,200</span> more this month.
-              Your top opportunity: reducing weekend food delivery orders by 30%.
-            </p>
-          </div>
-        </div>
-      </motion.div>
+        </motion.div>
+      )}
 
-      {/* Category Cards */}
-      <motion.div
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.8 }}
-      >
-        <h3 className="font-display text-base font-semibold text-foreground mb-4">Category Limits</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[
-            { name: "Food & Dining", spent: 8500, limit: 10000, urgency: "Important" },
-            { name: "Transport", spent: 3200, limit: 4000, urgency: "Urgent" },
-            { name: "Shopping", spent: 5800, limit: 5000, urgency: "Not Urgent" },
-            { name: "Entertainment", spent: 2400, limit: 3000, urgency: "Not Important" },
-            { name: "Rent & Bills", spent: 12000, limit: 12000, urgency: "Urgent & Important" },
-            { name: "Others", spent: 3100, limit: 6000, urgency: "Not Urgent" },
-          ].map((cat) => {
-            const pct = Math.min((cat.spent / cat.limit) * 100, 100);
-            const isOver = cat.spent > cat.limit;
-            return (
-              <div key={cat.name} className="bg-card rounded-lg border border-border p-4 shadow-card">
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-sm font-medium text-foreground">{cat.name}</p>
-                  <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${
-                    isOver
-                      ? "bg-destructive/10 text-destructive"
-                      : "bg-secondary text-secondary-foreground"
-                  }`}>
-                    {cat.urgency}
-                  </span>
+      {/* Recent Transactions Table */}
+      {data.recent_transactions && data.recent_transactions.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.8 }}
+          className="bg-card rounded-lg border border-border overflow-hidden shadow-card"
+        >
+          <div className="p-4 border-b border-border bg-secondary/30">
+            <h3 className="font-display font-semibold text-foreground">Recent Transactions</h3>
+          </div>
+          <div className="divide-y divide-border">
+            {data.recent_transactions.map((tx: any) => (
+              <div key={tx.id} className="p-4 flex items-center justify-between hover:bg-secondary/10 transition-colors">
+                <div className="flex items-center gap-4">
+                  <div className={`p-2 rounded-lg ${tx.is_anomaly ? 'bg-destructive/10 text-destructive' : 'bg-primary/10 text-primary'}`}>
+                    {tx.is_anomaly ? <AlertTriangle size={16} /> : <TrendingDown size={16} />}
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-sm text-foreground">{tx.merchant}</h4>
+                    <p className="text-xs text-muted-foreground mt-0.5">{tx.date}</p>
+                  </div>
                 </div>
-                <div className="flex items-end justify-between mb-2">
-                  <span className="text-lg font-display font-bold text-foreground">
-                    ₹{cat.spent.toLocaleString("en-IN")}
+                <div className="text-right">
+                  <span className={`font-display font-semibold ${tx.is_anomaly ? 'text-destructive' : 'text-foreground'}`}>
+                    ₹{tx.amount.toLocaleString("en-IN")}
                   </span>
-                  <span className="text-xs text-muted-foreground">
-                    / ₹{cat.limit.toLocaleString("en-IN")}
-                  </span>
-                </div>
-                <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-                  <div
-                    className={`h-full rounded-full transition-all duration-500 ${
-                      isOver ? "bg-destructive" : "bg-primary"
-                    }`}
-                    style={{ width: `${pct}%` }}
-                  />
+                  <p className="text-xs text-muted-foreground mt-0.5">{tx.category}</p>
                 </div>
               </div>
-            );
-          })}
-        </div>
-      </motion.div>
+            ))}
+          </div>
+        </motion.div>
+      )}
+
+      {/* Category Overview moved to AppSidebar */}
+
+      {/* AI Chatbot Support */}
+      <div className="mt-8">
+        <ChatAssistant />
+      </div>
     </div>
   );
 };

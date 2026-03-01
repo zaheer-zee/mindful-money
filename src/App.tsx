@@ -10,6 +10,7 @@ import DashboardLayout from "./layouts/DashboardLayout";
 import DashboardHome from "./pages/DashboardHome";
 import UploadPage from "./pages/UploadPage";
 import InsightsPage from "./pages/InsightsPage";
+import CategoriesPage from "./pages/CategoriesPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -31,7 +32,7 @@ const App = () => (
             <Route path="budget" element={<DashboardHome />} />
             <Route path="savings" element={<DashboardHome />} />
             <Route path="discipline" element={<DashboardHome />} />
-            <Route path="categories" element={<DashboardHome />} />
+            <Route path="categories" element={<CategoriesPage />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>

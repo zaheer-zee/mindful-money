@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import {
   LayoutDashboard,
   Wallet,
@@ -7,6 +8,8 @@ import {
   Upload,
   Lightbulb,
   LogOut,
+  TrendingDown,
+  TrendingUp,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
@@ -25,9 +28,6 @@ import {
 
 const mainItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-  { title: "Monthly Budget", url: "/dashboard/budget", icon: Wallet },
-  { title: "Savings", url: "/dashboard/savings", icon: PiggyBank },
-  { title: "Discipline Score", url: "/dashboard/discipline", icon: Target },
   { title: "Categories", url: "/dashboard/categories", icon: Tags },
   { title: "Upload Statements", url: "/dashboard/upload", icon: Upload },
   { title: "Insights", url: "/dashboard/insights", icon: Lightbulb },
@@ -38,6 +38,24 @@ export function AppSidebar() {
   const collapsed = state === "collapsed";
   const location = useLocation();
 
+  const [data, setData] = useState<any>(null);
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        const response = await fetch("http://localhost:8000/api/analytics/dashboard");
+        if (response.ok) {
+          const result = await response.json();
+          setData(result);
+        }
+      } catch (error) {
+        console.error("Failed to fetch dashboard data:", error);
+      }
+    };
+
+    fetchDashboardData();
+  }, []);
+
   return (
     <Sidebar collapsible="icon">
       <SidebarContent>
@@ -45,7 +63,7 @@ export function AppSidebar() {
           <SidebarGroupLabel>
             {!collapsed && (
               <span className="font-display text-sm font-bold text-sidebar-primary">
-                Spend<span className="text-sidebar-foreground">Wise</span>
+                Mindful<span className="text-sidebar-foreground">Money</span>
               </span>
             )}
           </SidebarGroupLabel>
@@ -69,6 +87,70 @@ export function AppSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {!collapsed && data && (
+          <SidebarGroup className="mt-4">
+            <SidebarGroupLabel>
+              <span className="text-xs font-semibold text-sidebar-foreground/70 uppercase tracking-wider">
+                Financial Overview
+              </span>
+            </SidebarGroupLabel>
+            <SidebarGroupContent className="px-4 space-y-4 mt-2">
+              {/* Monthly Budget Tracker */}
+              <div className="bg-sidebar-accent/30 rounded-lg p-3 border border-border/50">
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-1.5 text-xs font-medium text-sidebar-foreground">
+                    <Wallet size={14} className="text-primary" />
+                    Monthly Budget
+                  </div>
+                  <span className="text-xs font-bold">₹{data.monthly_budget.toLocaleString("en-IN")}</span>
+                </div>
+                <div className="flex items-end justify-between mb-2">
+                  <span className="text-[10px] text-muted-foreground mr-2">Spent: ₹{data.total_spent.toLocaleString("en-IN")}</span>
+                  <span className={`text-[10px] font-medium ${data.total_spent > data.monthly_budget ? "text-destructive" : "text-success"}`}>
+                    {((data.total_spent / data.monthly_budget) * 100).toFixed(0)}%
+                  </span>
+                </div>
+                <div className="h-1 bg-muted rounded-full overflow-hidden">
+                  <div
+                    className={`h-full bg-primary ${data.total_spent > data.monthly_budget ? "bg-destructive" : ""}`}
+                    style={{ width: `${Math.min((data.total_spent / data.monthly_budget) * 100, 100)}%` }}
+                  />
+                </div>
+              </div>
+
+              {/* Discipline Score */}
+              <div className="bg-sidebar-accent/30 rounded-lg p-3 border border-border/50">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 text-xs font-medium text-sidebar-foreground">
+                    <Target size={14} className="text-accent" />
+                    Discipline Score
+                  </div>
+                  <div className={`flex items-center gap-1 text-xs font-bold ${data.discipline_score > 80 ? "text-success" : "text-destructive"}`}>
+                    {data.discipline_score > 80 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+                    {data.discipline_score}
+                  </div>
+                </div>
+              </div>
+
+              {/* Mini Categories */}
+              <div>
+                <div className="flex items-center gap-1.5 text-xs font-medium text-sidebar-foreground mb-2">
+                  <Tags size={14} className="text-sidebar-foreground/70" />
+                  Top Categories Menu
+                </div>
+                <div className="space-y-1">
+                  {data.distribution.slice(0, 4).map((cat: any) => (
+                    <div key={cat.name} className="flex justify-between items-center text-[11px] py-1">
+                      <span className="text-sidebar-foreground/80 truncate pr-2">{cat.name}</span>
+                      <span className="font-medium text-sidebar-foreground">₹{(cat.value / 1000).toFixed(1)}k</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
       </SidebarContent>
       <SidebarFooter>
         <SidebarMenu>
