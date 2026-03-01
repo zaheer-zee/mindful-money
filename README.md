@@ -1,5 +1,7 @@
 # The Context-Aware Behavioral Engine
 
+**Demo Video:** [Google Drive Link](https://drive.google.com/drive/folders/1-IMRtwQMkTHn0QWP5CkKSQUxUo3g46-Z?usp=sharing)
+
 A smart, proactive financial guardian that shifts personal finance from reactive auditing to proactive behavioral awareness by detecting spending anomalies using contextual AI and generating plain-English explanations.
 
 ## 1. Problem Statement
